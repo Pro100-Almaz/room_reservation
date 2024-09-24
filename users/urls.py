@@ -8,5 +8,5 @@ from .views import (
 urlpatterns = [
     path("signup", UserRegistrationView.as_view()),
     path("signin", UserLoginView.as_view()),
-    path("profile", UserProfileView.as_view()),
+    path("profile", UserProfileView.as_view())
 ]
