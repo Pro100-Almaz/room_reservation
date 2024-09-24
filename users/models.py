@@ -1,45 +1,75 @@
+import uuid
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
 
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None):
+        """
+        Create and return a `User` with an email, username and password.
+        """
         if not email:
-            raise ValueError('The Email field must be set')
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+            raise ValueError("Users Must Have an email address")
+
+        user = self.model(
+            email=self.normalize_email(email),
+        )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+    def create_superuser(self, email, password):
+        """
+        Create and return a `User` with superuser (admin) permissions.
+        """
+        if password is None:
+            raise TypeError("Superusers must have a password.")
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        user = self.create_user(email, password)
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
 
-        return self.create_user(email, password, **extra_fields)
+        return user
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
-    date_joined = models.DateTimeField(default=timezone.now)
+class User(AbstractBaseUser):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(verbose_name="email address", max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = 'email'
+    is_superuser = models.BooleanField(default=False)
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
+
+    objects = UserManager()
 
     def __str__(self):
         return self.email
 
     class Meta:
-        ordering = ['date_joined']
+        """
+        to set table name in database
+        """
+
+        db_table = "login"
+
+
+class UserProfile(models.Model):
+    """
+    to store all other attributes associated to user
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    name = models.CharField(max_length=50, unique=False)
+
+    class Meta:
+        """
+        to set table name in database
+        """
+
+        db_table = "profile"
